@@ -3,12 +3,15 @@ import sqlite3
 from datetime import datetime
 from typing import Dict, List
 import pandas as pd
+from pathlib import Path
 
 class AnalyticsTracker:
     """Track and analyze prompt performance"""
 
     def __init__(self, db_path: str = "./data/performance.db"):
         self.db_path = db_path
+        # Ensure the directory exists
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
     def _init_db(self):

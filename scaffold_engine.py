@@ -5,6 +5,23 @@ from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 import os
+from pathlib import Path
+
+# Support for Streamlit secrets (import from providers.py)
+try:
+    import streamlit as st
+    USE_STREAMLIT_SECRETS = hasattr(st, 'secrets')
+except:
+    USE_STREAMLIT_SECRETS = False
+
+def get_env(key: str, default: str = None) -> str:
+    """Get environment variable from either .env or Streamlit secrets"""
+    if USE_STREAMLIT_SECRETS:
+        try:
+            return st.secrets.get(key, default)
+        except:
+            pass
+    return os.getenv(key, default)
 
 class ScaffoldEngine:
     """Build and manage prompt scaffolds"""
@@ -42,7 +59,7 @@ class ScaffoldEngine:
                 )
             )
 
-        embeddings = OpenAIEmbeddings(model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-large"))
+        embeddings = OpenAIEmbeddings(model=get_env("EMBEDDING_MODEL", "text-embedding-3-large"))
         return Chroma.from_documents(docs, embeddings)
 
     def find_technique(self, query: str, top_k: int = 3) -> List[Dict]:

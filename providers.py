@@ -5,7 +5,28 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 from typing import Dict, List, Tuple
 
+# Load environment variables from .env file (local development)
 load_dotenv()
+
+# Support for Streamlit secrets (cloud deployment)
+try:
+    import streamlit as st
+    # If running in Streamlit, use st.secrets
+    if hasattr(st, 'secrets'):
+        USE_STREAMLIT_SECRETS = True
+    else:
+        USE_STREAMLIT_SECRETS = False
+except:
+    USE_STREAMLIT_SECRETS = False
+
+def get_env(key: str, default: str = None) -> str:
+    """Get environment variable from either .env or Streamlit secrets"""
+    if USE_STREAMLIT_SECRETS:
+        try:
+            return st.secrets.get(key, default)
+        except:
+            pass
+    return os.getenv(key, default)
 
 class MultiProviderClient:
     """Unified interface for Claude, GPT, and Grok"""
@@ -13,21 +34,21 @@ class MultiProviderClient:
     def __init__(self):
         self.providers = {
             "claude": {
-                "client": Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY")),
-                "model": os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5-20250929"),
+                "client": Anthropic(api_key=get_env("ANTHROPIC_API_KEY")),
+                "model": get_env("CLAUDE_MODEL", "claude-sonnet-4-5-20250929"),
                 "type": "anthropic"
             },
             "gpt": {
-                "client": OpenAI(api_key=os.getenv("OPENAI_API_KEY")),
-                "model": os.getenv("GPT_MODEL", "gpt-4o-mini"),
+                "client": OpenAI(api_key=get_env("OPENAI_API_KEY")),
+                "model": get_env("GPT_MODEL", "gpt-4o-mini"),
                 "type": "openai"
             },
             "grok": {
                 "client": OpenAI(
-                    api_key=os.getenv("GROK_API_KEY"),
-                    base_url=os.getenv("GROK_BASE_URL", "https://api.x.ai/v1")
+                    api_key=get_env("GROK_API_KEY"),
+                    base_url=get_env("GROK_BASE_URL", "https://api.x.ai/v1")
                 ),
-                "model": os.getenv("GROK_MODEL", "grok-4-fast-reasoning"),
+                "model": get_env("GROK_MODEL", "grok-4-fast-reasoning"),
                 "type": "openai"
             }
         }
@@ -99,6 +120,6 @@ class MultiProviderClient:
             else:
                 key_var = f"{name.upper()}_API_KEY"
 
-            if os.getenv(key_var):
+            if get_env(key_var):
                 available.append(name)
         return available
