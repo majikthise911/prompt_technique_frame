@@ -45,12 +45,12 @@ You need at least one API key to use the app:
 
 - `ANTHROPIC_API_KEY` - For Claude (get at https://console.anthropic.com/)
 - `OPENAI_API_KEY` - For GPT-4 (get at https://platform.openai.com/)
-- `GROK_API_KEY` - For Grok (get at https://x.ai/)
+- `XAI_API_KEY` - For Grok (get at https://x.ai/)
 
 Optional configuration:
 - `CLAUDE_MODEL` (default: claude-sonnet-4-5-20250929)
 - `GPT_MODEL` (default: gpt-4o-mini)
-- `GROK_MODEL` (default: grok-4-fast-reasoning)
+- `XAI_MODEL` (default: grok-beta)
 
 ## Deploy to Streamlit Cloud
 
@@ -87,12 +87,12 @@ Optional configuration:
 # Required: Add at least one API key
 ANTHROPIC_API_KEY = "sk-ant-..."
 OPENAI_API_KEY = "sk-..."
-GROK_API_KEY = "xai-..."
+XAI_API_KEY = "xai-..."
 
 # Optional: Custom model configurations
 CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
 GPT_MODEL = "gpt-4o-mini"
-GROK_MODEL = "grok-4-fast-reasoning"
+XAI_MODEL = "grok-beta"
 ```
 
 4. Click "Save"

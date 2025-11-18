@@ -72,7 +72,7 @@ with st.sidebar:
            ```
            ANTHROPIC_API_KEY=sk-ant-...
            OPENAI_API_KEY=sk-...
-           GROK_API_KEY=xai-...
+           XAI_API_KEY=xai-...
            ```
         3. Restart the app
         """)
@@ -99,7 +99,7 @@ with st.sidebar:
                         # Show which keys are in secrets (without revealing values)
                         secret_keys = list(st.secrets.keys()) if has_secrets else []
                         st.caption(f"Keys in secrets: {secret_keys}")
-                        st.caption(f"GROK_API_KEY in secrets: {'GROK_API_KEY' in st.secrets}")
+                        st.caption(f"XAI_API_KEY in secrets: {'XAI_API_KEY' in st.secrets}")
                         st.caption(f"ANTHROPIC_API_KEY in secrets: {'ANTHROPIC_API_KEY' in st.secrets}")
                         st.caption(f"OPENAI_API_KEY in secrets: {'OPENAI_API_KEY' in st.secrets}")
                 except Exception as e:

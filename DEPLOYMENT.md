@@ -47,12 +47,12 @@ Once deployed:
 # Add at least ONE of these:
 ANTHROPIC_API_KEY = "sk-ant-api03-xxxxx"
 OPENAI_API_KEY = "sk-xxxxx"
-GROK_API_KEY = "xai-xxxxx"
+XAI_API_KEY = "xai-xxxxx"
 
 # Optional: Custom models (defaults shown)
 CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
 GPT_MODEL = "gpt-4o-mini"
-GROK_MODEL = "grok-4-fast-reasoning"
+XAI_MODEL = "grok-beta"
 EMBEDDING_MODEL = "text-embedding-3-large"
 ```
 

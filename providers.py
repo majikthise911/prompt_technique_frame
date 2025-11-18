@@ -59,14 +59,14 @@ class MultiProviderClient:
             }
 
         # Configure Grok if API key available
-        grok_key = get_env("GROK_API_KEY")
+        grok_key = get_env("XAI_API_KEY")
         if grok_key:
             self.providers["grok"] = {
                 "client": OpenAI(
                     api_key=grok_key,
-                    base_url=get_env("GROK_BASE_URL", "https://api.x.ai/v1")
+                    base_url=get_env("XAI_BASE_URL", "https://api.x.ai/v1")
                 ),
-                "model": get_env("GROK_MODEL", "grok-4-fast-reasoning"),
+                "model": get_env("XAI_MODEL", "grok-beta"),
                 "type": "openai"
             }
 
