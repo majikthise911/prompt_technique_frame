@@ -52,7 +52,7 @@ XAI_API_KEY = "xai-xxxxx"
 # Optional: Custom models (defaults shown)
 CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
 GPT_MODEL = "gpt-4o-mini"
-XAI_MODEL = "grok-2-latest"
+XAI_MODEL = "grok-4-fast-reasoning"
 EMBEDDING_MODEL = "text-embedding-3-large"
 ```
 

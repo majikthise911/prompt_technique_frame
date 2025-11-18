@@ -66,7 +66,7 @@ class MultiProviderClient:
                     api_key=grok_key,
                     base_url=get_env("XAI_BASE_URL", "https://api.x.ai/v1")
                 ),
-                "model": get_env("XAI_MODEL", "grok-2-latest"),
+                "model": get_env("XAI_MODEL", "grok-4-fast-reasoning"),
                 "type": "openai"
             }
 
