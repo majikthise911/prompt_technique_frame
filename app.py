@@ -28,7 +28,28 @@ def init_components():
         'pdf_viewer': PDFSourceViewer()
     }
 
-components = init_components()
+# Add cache buster based on API keys to reinitialize when keys change
+try:
+    import streamlit as st_check
+    if hasattr(st_check, 'secrets'):
+        # Use presence of keys as cache buster
+        cache_key = f"{bool(st.secrets.get('ANTHROPIC_API_KEY'))}{bool(st.secrets.get('OPENAI_API_KEY'))}{bool(st.secrets.get('XAI_API_KEY'))}"
+    else:
+        cache_key = "local"
+except:
+    cache_key = "local"
+
+@st.cache_resource
+def init_components_with_key(_cache_key):
+    return {
+        'client': MultiProviderClient(),
+        'engine': ScaffoldEngine(),
+        'analytics': AnalyticsTracker(),
+        'exporter': ClaudeCodeExporter(),
+        'pdf_viewer': PDFSourceViewer()
+    }
+
+components = init_components_with_key(cache_key)
 
 # === SESSION STATE ===
 if 'scaffold' not in st.session_state:
@@ -88,6 +109,11 @@ with st.sidebar:
             st.caption(f"Not configured: {', '.join(missing)}")
             st.caption("Add their API keys to `.env` or Streamlit secrets to enable them")
 
+            # Cache clear button
+            if st.button("🔄 Clear Cache & Reload Providers"):
+                st.cache_resource.clear()
+                st.rerun()
+
             # Debug info
             if st.checkbox("🔍 Show Debug Info"):
                 import os
@@ -102,6 +128,11 @@ with st.sidebar:
                         st.caption(f"XAI_API_KEY in secrets: {'XAI_API_KEY' in st.secrets}")
                         st.caption(f"ANTHROPIC_API_KEY in secrets: {'ANTHROPIC_API_KEY' in st.secrets}")
                         st.caption(f"OPENAI_API_KEY in secrets: {'OPENAI_API_KEY' in st.secrets}")
+
+                        # Test get_env function directly
+                        from providers import get_env
+                        xai_test = get_env("XAI_API_KEY")
+                        st.caption(f"get_env('XAI_API_KEY') returns: {xai_test[:10] if xai_test else 'None'}...")
                 except Exception as e:
                     st.caption(f"Debug error: {e}")
 
@@ -578,7 +609,15 @@ elif mode == "📊 Analytics":
 
             st.dataframe(stats, use_container_width=True)
         else:
-            st.info("No data yet. Start using the app to see analytics!")
+            st.info("📊 No technique data yet!")
+            st.markdown("""
+            **To populate analytics:**
+            1. Go to **Single Query** or **Comparison** mode
+            2. Run a query
+            3. Rate the response (1-5 stars)
+            4. Click **"💾 Save Rating"**
+            5. Return here to see your analytics!
+            """)
 
     with tab2:
         st.markdown("### Provider Comparison")
@@ -610,7 +649,7 @@ elif mode == "📊 Analytics":
 
             st.dataframe(provider_stats, use_container_width=True)
         else:
-            st.info("No provider data yet.")
+            st.info("🤖 No provider data yet! Run queries and save ratings to see provider comparisons.")
 
     with tab3:
         st.markdown("### Recent History")
@@ -620,7 +659,24 @@ elif mode == "📊 Analytics":
         if not history.empty:
             st.dataframe(history, use_container_width=True)
         else:
-            st.info("No history yet.")
+            st.info("No history yet. Run queries and save ratings to populate analytics!")
+
+            # Debug: Show database info
+            with st.expander("🔍 Debug Analytics"):
+                import os
+                db_path = components['analytics'].db_path
+                st.caption(f"Database path: {db_path}")
+                st.caption(f"Database exists: {os.path.exists(db_path)}")
+
+                if os.path.exists(db_path):
+                    import sqlite3
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT COUNT(*) FROM interactions")
+                    count = cursor.fetchone()[0]
+                    conn.close()
+                    st.caption(f"Total interactions in DB: {count}")
+                    st.caption("If count is 0, you need to run queries and click 'Save Rating'")
 
 # === MODE: EXPORT ===
 elif mode == "📤 Export":
