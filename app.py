@@ -569,6 +569,53 @@ elif mode == "⚖️ Comparison":
             st.divider()
             st.markdown(f"**Technique Used:** {technique['name']}")
 
+            # Radar chart comparison
+            if len(results) >= 2:
+                import plotly.graph_objects as go
+
+                st.subheader("📊 Provider Comparison Radar")
+
+                # Create metrics
+                categories = ['Response Length', 'Token Efficiency', 'Speed Score', 'Detail Level', 'Clarity']
+
+                fig = go.Figure()
+
+                for prov, data in results.items():
+                    response_text = data['response']
+                    tokens = data['metadata'].get('tokens', 1000)
+
+                    # Calculate metrics (normalized 0-100)
+                    response_length = min(100, (len(response_text) / 50))  # Normalize length
+                    token_efficiency = min(100, (len(response_text) / max(tokens, 1)) * 10)  # Chars per token
+                    speed_score = min(100, 10000 / max(tokens, 100))  # Inverse of tokens (proxy for speed)
+                    detail_level = min(100, response_text.count('\n') * 5)  # Line breaks as proxy
+                    clarity = min(100, 100 - (response_text.count('however') + response_text.count('although')) * 5)  # Less hedging = more clarity
+
+                    values = [response_length, token_efficiency, speed_score, detail_level, clarity]
+
+                    fig.add_trace(go.Scatterpolar(
+                        r=values,
+                        theta=categories,
+                        fill='toself',
+                        name=prov.upper()
+                    ))
+
+                fig.update_layout(
+                    polar=dict(
+                        radialaxis=dict(
+                            visible=True,
+                            range=[0, 100]
+                        )
+                    ),
+                    showlegend=True,
+                    height=500
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+                st.caption("📈 Metrics are estimated based on response characteristics. Higher values are generally better.")
+
+            st.divider()
+
             cols = st.columns(len(results))
 
             for col, (prov, data) in zip(cols, results.items()):
