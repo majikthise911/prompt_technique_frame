@@ -50,7 +50,7 @@ You need at least one API key to use the app:
 Optional configuration:
 - `CLAUDE_MODEL` (default: claude-sonnet-4-5-20250929)
 - `GPT_MODEL` (default: gpt-4o-mini)
-- `XAI_MODEL` (default: grok-beta)
+- `XAI_MODEL` (default: grok-2-latest)
 
 ## Deploy to Streamlit Cloud
 
@@ -92,7 +92,7 @@ XAI_API_KEY = "xai-..."
 # Optional: Custom model configurations
 CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
 GPT_MODEL = "gpt-4o-mini"
-XAI_MODEL = "grok-beta"
+XAI_MODEL = "grok-2-latest"
 ```
 
 4. Click "Save"

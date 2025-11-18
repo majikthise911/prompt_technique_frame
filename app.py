@@ -64,6 +64,10 @@ if 'last_query' not in st.session_state:
     st.session_state.last_query = ""
 if 'comparison_results' not in st.session_state:
     st.session_state.comparison_results = {}
+if 'comparison_type' not in st.session_state:
+    st.session_state.comparison_type = None
+if 'comparison_technique' not in st.session_state:
+    st.session_state.comparison_technique = None
 if 'last_mode' not in st.session_state:
     st.session_state.last_mode = "🎯 Single Query"
 if 'last_provider' not in st.session_state:
@@ -385,13 +389,15 @@ elif mode == "⚖️ Comparison":
 
     # Show previous results if available
     if st.session_state.comparison_results:
-        with st.expander("📊 Previous Comparison Results", expanded=False):
-            st.caption("Scroll down to see these results again or run a new comparison")
-            prev_cols = st.columns(len(st.session_state.comparison_results))
-            for col, (name, data) in zip(prev_cols, st.session_state.comparison_results.items()):
-                with col:
-                    st.markdown(f"**{name}**")
-                    st.caption(data.get('response', '')[:200] + "...")
+        col_a, col_b = st.columns([3, 1])
+        with col_a:
+            st.info("📊 Previous comparison results are shown below. Run a new comparison to replace them.")
+        with col_b:
+            if st.button("🗑️ Clear Results", use_container_width=True):
+                st.session_state.comparison_results = {}
+                st.session_state.comparison_type = None
+                st.session_state.comparison_technique = None
+                st.rerun()
 
     comparison_type = st.radio(
         "Compare by:",
@@ -447,13 +453,20 @@ elif mode == "⚖️ Comparison":
                     results[tech_name] = {
                         'response': response,
                         'metadata': metadata,
-                        'technique': technique
+                        'technique': technique,
+                        'provider': provider,
+                        'query': user_input
                     }
 
                 progress_bar.progress((i + 1) / len(selected))
 
             # Save to session state
             st.session_state.comparison_results = results
+            st.session_state.comparison_type = "techniques"
+
+        # Display results if they exist (outside the button block)
+        if st.session_state.comparison_results and st.session_state.get('comparison_type') == 'techniques':
+            results = st.session_state.comparison_results
 
             # Display side-by-side
             st.divider()
@@ -475,25 +488,28 @@ elif mode == "⚖️ Comparison":
 
             for col, (tech_name, data) in zip(rating_cols, results.items()):
                 with col:
-                    rating_key = f"rating_comp_{tech_name}_{hash(user_input)}"
+                    # Get saved query from session state
+                    saved_query = data.get('query', user_input)
+                    rating_key = f"rating_comp_{tech_name}_{hash(saved_query)}"
                     rating = st.slider(
                         f"Rate {tech_name}:",
                         1, 5, 3,
                         key=rating_key
                     )
-                    if st.button(f"💾 Save", key=f"save_{tech_name}_{hash(user_input)}", use_container_width=True):
+                    if st.button(f"💾 Save", key=f"save_{tech_name}_{hash(saved_query)}", use_container_width=True):
                         # Log to analytics
                         components['analytics'].log_interaction(
-                            query=user_input,
+                            query=saved_query,
                             technique_id=data['technique']['id'],
                             technique_name=data['technique']['name'],
-                            provider=provider,
+                            provider=data.get('provider', provider),
                             response=data['response'],
                             tokens=data['metadata'],
                             response_time=0,  # Not tracked in comparison mode
                             rating=rating
                         )
                         st.success("✅ Saved!")
+                        st.balloons()
 
     else:  # Compare providers
         selected_providers = st.multiselect(
@@ -532,13 +548,22 @@ elif mode == "⚖️ Comparison":
 
                     results[prov] = {
                         'response': response,
-                        'metadata': metadata
+                        'metadata': metadata,
+                        'technique': technique,
+                        'query': user_input
                     }
 
                 progress_bar.progress((i + 1) / len(selected_providers))
 
             # Save to session state
             st.session_state.comparison_results = results
+            st.session_state.comparison_type = "providers"
+            st.session_state.comparison_technique = technique
+
+        # Display results if they exist (outside the button block)
+        if st.session_state.comparison_results and st.session_state.get('comparison_type') == 'providers':
+            results = st.session_state.comparison_results
+            technique = st.session_state.get('comparison_technique')
 
             # Display side-by-side
             st.divider()
@@ -562,18 +587,21 @@ elif mode == "⚖️ Comparison":
 
             for col, (prov, data) in zip(rating_cols, results.items()):
                 with col:
-                    rating_key = f"rating_prov_{prov}_{hash(user_input)}"
+                    # Get saved query from session state
+                    saved_query = data.get('query', user_input)
+                    rating_key = f"rating_prov_{prov}_{hash(saved_query)}"
                     rating = st.slider(
                         f"Rate {prov.upper()}:",
                         1, 5, 3,
                         key=rating_key
                     )
-                    if st.button(f"💾 Save", key=f"save_{prov}_{hash(user_input)}", use_container_width=True):
+                    if st.button(f"💾 Save", key=f"save_{prov}_{hash(saved_query)}", use_container_width=True):
                         # Log to analytics
+                        saved_technique = data.get('technique', technique)
                         components['analytics'].log_interaction(
-                            query=user_input,
-                            technique_id=technique['id'],
-                            technique_name=technique['name'],
+                            query=saved_query,
+                            technique_id=saved_technique['id'],
+                            technique_name=saved_technique['name'],
                             provider=prov,
                             response=data['response'],
                             tokens=data['metadata'],
@@ -581,6 +609,7 @@ elif mode == "⚖️ Comparison":
                             rating=rating
                         )
                         st.success("✅ Saved!")
+                        st.balloons()
 
 # === MODE: ANALYTICS ===
 elif mode == "📊 Analytics":
