@@ -39,6 +39,18 @@ if 'technique' not in st.session_state:
     st.session_state.technique = None
 if 'comparison_mode' not in st.session_state:
     st.session_state.comparison_mode = False
+if 'last_query' not in st.session_state:
+    st.session_state.last_query = ""
+if 'comparison_results' not in st.session_state:
+    st.session_state.comparison_results = {}
+if 'last_mode' not in st.session_state:
+    st.session_state.last_mode = "🎯 Single Query"
+if 'last_provider' not in st.session_state:
+    st.session_state.last_provider = None
+if 'last_temperature' not in st.session_state:
+    st.session_state.last_temperature = 0.7
+if 'last_max_tokens' not in st.session_state:
+    st.session_state.last_max_tokens = 2048
 
 # === HEADER ===
 st.title("🔬 Multi-Provider Prompt Scaffold Inspector")
@@ -52,9 +64,46 @@ with st.sidebar:
     available_providers = components['client'].get_available_providers()
     if not available_providers:
         st.error("⚠️ No API keys configured! Check your .env file")
+        st.info("""
+        **To configure API keys:**
+
+        1. Create a `.env` file in the project root
+        2. Add at least one API key:
+           ```
+           ANTHROPIC_API_KEY=sk-ant-...
+           OPENAI_API_KEY=sk-...
+           GROK_API_KEY=xai-...
+           ```
+        3. Restart the app
+        """)
         st.stop()
 
-    st.success(f"✅ {len(available_providers)} providers available")
+    st.success(f"✅ {len(available_providers)} provider(s) available: {', '.join(available_providers)}")
+
+    # Debug: Show which providers are NOT available
+    all_possible = ["claude", "gpt", "grok"]
+    missing = [p for p in all_possible if p not in available_providers]
+    if missing:
+        with st.expander("ℹ️ Missing Providers"):
+            st.caption(f"Not configured: {', '.join(missing)}")
+            st.caption("Add their API keys to `.env` or Streamlit secrets to enable them")
+
+            # Debug info
+            if st.checkbox("🔍 Show Debug Info"):
+                import os
+                try:
+                    import streamlit as st_check
+                    has_secrets = hasattr(st_check, 'secrets')
+                    st.caption(f"Streamlit secrets available: {has_secrets}")
+                    if has_secrets:
+                        # Show which keys are in secrets (without revealing values)
+                        secret_keys = list(st.secrets.keys()) if has_secrets else []
+                        st.caption(f"Keys in secrets: {secret_keys}")
+                        st.caption(f"GROK_API_KEY in secrets: {'GROK_API_KEY' in st.secrets}")
+                        st.caption(f"ANTHROPIC_API_KEY in secrets: {'ANTHROPIC_API_KEY' in st.secrets}")
+                        st.caption(f"OPENAI_API_KEY in secrets: {'OPENAI_API_KEY' in st.secrets}")
+                except Exception as e:
+                    st.caption(f"Debug error: {e}")
 
     # Mode selection
     mode = st.radio(
@@ -62,6 +111,8 @@ with st.sidebar:
         ["🎯 Single Query", "⚖️ Comparison", "📊 Analytics", "📤 Export", "📋 ChatGPT Instructions"],
         key="mode"
     )
+    # Track mode changes
+    st.session_state.last_mode = mode
 
     st.divider()
 
@@ -85,8 +136,12 @@ if mode == "🎯 Single Query":
             "Your Query:",
             placeholder="e.g., Design a microservices architecture for a social media platform",
             height=120,
+            value=st.session_state.last_query if st.session_state.last_mode == "🎯 Single Query" else "",
             key="user_input"
         )
+        # Save query to session state
+        if user_input:
+            st.session_state.last_query = user_input
 
     with col2:
         provider = st.selectbox("Select Provider:", available_providers, key="provider")
@@ -297,6 +352,16 @@ if mode == "🎯 Single Query":
 elif mode == "⚖️ Comparison":
     st.subheader("Compare Techniques or Providers")
 
+    # Show previous results if available
+    if st.session_state.comparison_results:
+        with st.expander("📊 Previous Comparison Results", expanded=False):
+            st.caption("Scroll down to see these results again or run a new comparison")
+            prev_cols = st.columns(len(st.session_state.comparison_results))
+            for col, (name, data) in zip(prev_cols, st.session_state.comparison_results.items()):
+                with col:
+                    st.markdown(f"**{name}**")
+                    st.caption(data.get('response', '')[:200] + "...")
+
     comparison_type = st.radio(
         "Compare by:",
         ["🔧 Different Techniques (Same Provider)", "🤖 Different Providers (Same Technique)"],
@@ -306,8 +371,12 @@ elif mode == "⚖️ Comparison":
     user_input = st.text_area(
         "Your Query:",
         placeholder="Enter a query to compare across techniques/providers",
-        height=100
+        height=100,
+        value=st.session_state.last_query if st.session_state.last_mode == "⚖️ Comparison" else ""
     )
+    # Save query to session state
+    if user_input:
+        st.session_state.last_query = user_input
 
     if comparison_type == "🔧 Different Techniques (Same Provider)":
         provider = st.selectbox("Provider:", available_providers)
@@ -352,6 +421,9 @@ elif mode == "⚖️ Comparison":
 
                 progress_bar.progress((i + 1) / len(selected))
 
+            # Save to session state
+            st.session_state.comparison_results = results
+
             # Display side-by-side
             st.divider()
             cols = st.columns(len(results))
@@ -364,6 +436,33 @@ elif mode == "⚖️ Comparison":
 
                     if show_metadata:
                         st.caption(f"Tokens: {data['metadata'].get('tokens', 'N/A')}")
+
+            # Analytics logging
+            st.divider()
+            st.subheader("Rate Comparison Results")
+            rating_cols = st.columns(len(results))
+
+            for col, (tech_name, data) in zip(rating_cols, results.items()):
+                with col:
+                    rating_key = f"rating_comp_{tech_name}_{hash(user_input)}"
+                    rating = st.slider(
+                        f"Rate {tech_name}:",
+                        1, 5, 3,
+                        key=rating_key
+                    )
+                    if st.button(f"💾 Save", key=f"save_{tech_name}_{hash(user_input)}", use_container_width=True):
+                        # Log to analytics
+                        components['analytics'].log_interaction(
+                            query=user_input,
+                            technique_id=data['technique']['id'],
+                            technique_name=data['technique']['name'],
+                            provider=provider,
+                            response=data['response'],
+                            tokens=data['metadata'],
+                            response_time=0,  # Not tracked in comparison mode
+                            rating=rating
+                        )
+                        st.success("✅ Saved!")
 
     else:  # Compare providers
         selected_providers = st.multiselect(
@@ -407,6 +506,9 @@ elif mode == "⚖️ Comparison":
 
                 progress_bar.progress((i + 1) / len(selected_providers))
 
+            # Save to session state
+            st.session_state.comparison_results = results
+
             # Display side-by-side
             st.divider()
             st.markdown(f"**Technique Used:** {technique['name']}")
@@ -421,6 +523,33 @@ elif mode == "⚖️ Comparison":
                     if show_metadata:
                         st.caption(f"Tokens: {data['metadata'].get('tokens', 'N/A')}")
                         st.caption(f"Model: {data['metadata'].get('model', 'N/A')}")
+
+            # Analytics logging
+            st.divider()
+            st.subheader("Rate Comparison Results")
+            rating_cols = st.columns(len(results))
+
+            for col, (prov, data) in zip(rating_cols, results.items()):
+                with col:
+                    rating_key = f"rating_prov_{prov}_{hash(user_input)}"
+                    rating = st.slider(
+                        f"Rate {prov.upper()}:",
+                        1, 5, 3,
+                        key=rating_key
+                    )
+                    if st.button(f"💾 Save", key=f"save_{prov}_{hash(user_input)}", use_container_width=True):
+                        # Log to analytics
+                        components['analytics'].log_interaction(
+                            query=user_input,
+                            technique_id=technique['id'],
+                            technique_name=technique['name'],
+                            provider=prov,
+                            response=data['response'],
+                            tokens=data['metadata'],
+                            response_time=0,  # Not tracked in comparison mode
+                            rating=rating
+                        )
+                        st.success("✅ Saved!")
 
 # === MODE: ANALYTICS ===
 elif mode == "📊 Analytics":

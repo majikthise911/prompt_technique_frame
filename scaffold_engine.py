@@ -18,8 +18,13 @@ def get_env(key: str, default: str = None) -> str:
     """Get environment variable from either .env or Streamlit secrets"""
     if USE_STREAMLIT_SECRETS:
         try:
-            return st.secrets.get(key, default)
-        except:
+            # Streamlit secrets accessed with bracket notation or .get() on the underlying dict
+            if key in st.secrets:
+                return st.secrets[key]
+            else:
+                return default
+        except Exception as e:
+            # Fallback if secrets access fails
             pass
     return os.getenv(key, default)
 
